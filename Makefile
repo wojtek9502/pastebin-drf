@@ -11,11 +11,17 @@ pull:
 down:
 	docker-compose down
 
+db-makemigrations:
+	$(python) pastebin/manage.py makemigrations
+
 db-migrate:
 	$(python) pastebin/manage.py migrate
 
-db-makemigrations:
-	$(python) pastebin/manage.py makemigrations ${app}
+db-full-migrate:
+	$(python) pastebin/manage.py makemigrations
+	$(python) pastebin/manage.py migrate
+
+
 
 
 uninstall-unrequired-libraries:

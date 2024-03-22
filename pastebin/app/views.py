@@ -1,8 +1,15 @@
-from django.shortcuts import render
+from .models import NoteModel
+from .serializers import NoteSerializer
+from rest_framework import generics
 
-# Create your views here.
-from django.http import HttpResponse
+
+class NoteCreateAPIView(generics.CreateAPIView):
+    queryset = NoteModel.objects.all()
+    serializer_class = NoteSerializer
+    lookup_field = 'slug'
 
 
-def index(request):
-    return HttpResponse("Hello, world. You're at the polls index.")
+class NoteDetailAPIView(generics.RetrieveAPIView):
+    queryset = NoteModel.objects.all()
+    serializer_class = NoteSerializer
+    lookup_field = 'slug'
