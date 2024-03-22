@@ -1,0 +1,112 @@
+openapi: 3.0.3
+info:
+  title: Pastebin API
+  version: 0.0.1
+paths:
+  /api/note:
+    post:
+      operationId: root_create
+      requestBody:
+        content:
+          application/vnd.api+json:
+            schema:
+              $ref: '#/components/schemas/Note'
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/Note'
+          description: ''
+  /api/note/{slug}:
+    get:
+      operationId: root_retrieve
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      security:
+      - cookieAuth: []
+      - basicAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/vnd.api+json:
+              schema:
+                $ref: '#/components/schemas/Note'
+          description: ''
+components:
+  schemas:
+    Category:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+      - name
+    Note:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+        text:
+          type: string
+        expiration_type:
+          type: string
+          default: NEVER
+        exposure_type:
+          type: string
+          default: PUBLIC
+        syntax:
+          type: string
+          default: NONE
+        is_password:
+          type: string
+          default: 'True'
+        link_slug:
+          type: string
+          readOnly: true
+        categories:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+          readOnly: true
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tag'
+          readOnly: true
+      required:
+      - categories
+      - id
+      - link_slug
+      - tags
+      - text
+      - title
+    Tag:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+      - name
+  securitySchemes:
+    basicAuth:
+      type: http
+      scheme: basic
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
