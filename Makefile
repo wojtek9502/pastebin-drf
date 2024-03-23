@@ -17,7 +17,7 @@ db-makemigrations:
 db-migrate:
 	$(python) pastebin/manage.py migrate
 
-db-full-migrate:
+db-migrate-full:
 	$(python) pastebin/manage.py makemigrations
 	$(python) pastebin/manage.py migrate
 

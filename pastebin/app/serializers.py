@@ -1,10 +1,18 @@
-from hashlib import sha256
-
 from . import models
 from rest_framework import serializers
-from rest_framework.fields import CharField, BooleanField, DateTimeField
+from rest_framework.fields import CharField, DateTimeField, BooleanField
 
 from .utils.models_choices import NoteExpirationChoices, NoteExposureChoices, NoteSyntaxChoices
+
+
+class NoteFetchByIdSerializer(serializers.Serializer):
+    id = serializers.UUIDField(required=True)
+    password_clear = CharField(default='', required=False)
+
+
+class NoteFetchByLinkSlugSerializer(serializers.Serializer):
+    link_slug = CharField(required=True)
+    password_clear = CharField(default='', required=False)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -31,11 +39,18 @@ class NoteSerializer(serializers.ModelSerializer):
     expiration_type = CharField(required=False, default=NoteExpirationChoices.NEVER)
     exposure_type = CharField(required=False, default=NoteExposureChoices.PUBLIC)
     syntax = CharField(required=False, default=NoteSyntaxChoices.NONE)
-    is_password = BooleanField(required=False, default=False)
+    password_clear = CharField(source='password', required=False, write_only=True, default='')
+    is_password = BooleanField(read_only=True, default=False)
     categories = CategorySerializer(many=True, default=[])
     tags = TagSerializer(many=True, default=[])
     inserted_on = DateTimeField(read_only=True)
     updated_on = DateTimeField(read_only=True)
+
+    class Meta:
+        model = models.NoteModel
+        fields = ('id', 'title', 'text', 'link_slug', 'expiration_type',
+                  'exposure_type', 'syntax', 'password_clear', 'is_password',
+                  'categories', 'tags', 'inserted_on', 'updated_on')
 
     def validate(self, data):
         expiration_type = data["expiration_type"]
@@ -57,10 +72,3 @@ class NoteSerializer(serializers.ModelSerializer):
                 {"Invalid Choice": f"syntax field is not valid. Valid choices {syntax_choices}"})
 
         return data
-
-
-    class Meta:
-        model = models.NoteModel
-        fields = ('id', 'title', 'text', 'link_slug', 'expiration_type',
-                  'exposure_type', 'syntax', 'is_password',
-                  'categories', 'tags', 'inserted_on', 'updated_on')
