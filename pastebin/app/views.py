@@ -1,9 +1,16 @@
-from .models import NoteModel, TagModel, CategoryModel
+from django.db.models import Q
+from rest_framework.exceptions import ValidationError
+from rest_framework.views import APIView
+
+from .models import NoteModel
 from .serializers import NoteSerializer
 from rest_framework import generics, status
 from rest_framework.response import Response
 
-from .utils.helpers import get_note_link_slug
+from .services import NoteService
+from .utils.helpers import validate_serializer
+from .utils.models_choices import NoteExposureChoices, NoteExpirationChoices
+from .pagination import PaginationClass
 
 
 class NoteCreateAPIView(generics.CreateAPIView):
@@ -13,41 +20,13 @@ class NoteCreateAPIView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
-        serializer.is_valid()
+        validate_serializer(serializer)
         serializer_data = serializer.data
-        serializer.validate(data=serializer_data)
 
+        # create note
         data = request.data
-        tags = data['tags']
-        categories = data['categories']
-
-        # create note instance
-        note_instance = NoteModel.objects.create(
-            title=data['title'],
-            text=data['text'],
-            link_slug=get_note_link_slug(),
-            expiration_type=data['expiration_type'],
-            exposure_type=data['exposure_type'],
-            syntax=data['syntax'],
-            is_password=data['is_password']
-        )
-        note_instance.save()
-
-        # create tags
-        tags_instances = []
-        for tag_name in tags:
-            tag_instance, is_created = TagModel.objects.get_or_create(name=tag_name)
-            tags_instances.append(tag_instance)
-
-        # create categories
-        categories_instances = []
-        for category_name in categories:
-            category_instance, is_created = CategoryModel.objects.get_or_create(name=category_name)
-            categories_instances.append(category_instance)
-
-        # add many to many instances to note instance
-        note_instance.tags.set(tags_instances)
-        note_instance.categories.set(categories_instances)
+        service = NoteService()
+        note_instance = service.create_note(note_data=data)
 
         # return API response
         response_data = serializer_data
@@ -56,17 +35,55 @@ class NoteCreateAPIView(generics.CreateAPIView):
         return Response(serializer_data, status=status.HTTP_201_CREATED)
 
 
-class NoteDetailAPIView(generics.RetrieveAPIView):
+class NoteListPublicLatestAPIView(generics.ListAPIView):
+    queryset = NoteModel.objects.filter(
+        Q(exposure_type=NoteExposureChoices.PUBLIC) &
+        ~Q(expiration_type=NoteExpirationChoices.BURN_AFTER_READ)
+    ).order_by('-inserted_on')[:10]
+
+    serializer_class = NoteSerializer
+    lookup_field = 'link_slug'
+
+
+class NoteDetailBySlugAPIView(generics.RetrieveAPIView):
     queryset = NoteModel.objects.all()
     serializer_class = NoteSerializer
     lookup_field = 'link_slug'
+
 
 class NoteDetailByIdAPIView(generics.RetrieveAPIView):
     queryset = NoteModel.objects.all()
     serializer_class = NoteSerializer
     lookup_field = 'id'
 
+
 class NoteListAPIView(generics.ListAPIView):
     queryset = NoteModel.objects.all()
     serializer_class = NoteSerializer
     lookup_field = 'link_slug'
+    pagination_class = PaginationClass
+
+
+class NoteDeleteAPIView(generics.DestroyAPIView):
+    serializer_class = NoteSerializer
+    lookup_field = 'link_slug'
+
+    def get_queryset(self):
+        queryset = NoteModel.objects.filter(link_slug=self.kwargs['link_slug'])
+        return queryset
+
+
+class NoteIsPasswordNeededAPIView(APIView):
+    def get(self, request, link_slug: str, format=None):
+        instance_data = NoteModel.objects.values_list('is_password').get(link_slug=link_slug)
+        if not instance_data:
+            raise ValidationError("Note not exists")
+
+        response_data = dict(is_password_needed=instance_data[0])
+        return Response(response_data)
+
+
+class HealthzAPIView(APIView):
+    def get(self, request, format=None):
+        response_data = dict(status="OK")
+        return Response(response_data)

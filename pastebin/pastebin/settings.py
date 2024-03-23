@@ -79,7 +79,7 @@ WSGI_APPLICATION = 'pastebin.wsgi.application'
 
 # DRF
 REST_FRAMEWORK = {
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',  # add spectacular module - WebGUI for API
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',  # add spectacular, a module - WebGUI for API
     'DEFAULT_AUTHENTICATION_CLASSES': [],                          # disable API auth
     'DEFAULT_PERMISSION_CLASSES': [],                              # disable API auth
 }
