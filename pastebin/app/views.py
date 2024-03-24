@@ -1,16 +1,21 @@
+from uuid import UUID
+
+from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
-from rest_framework.exceptions import ValidationError
+from drf_spectacular.utils import extend_schema
 from rest_framework.views import APIView
 
 from .models import NoteModel
-from .serializers import NoteSerializer
+from .serializers import NoteSerializer, NoteFetchByIdSerializer, NoteFetchByLinkSlugSerializer, \
+    NodeIsPasswordNeededSerializer, HealthzSerializer
 from rest_framework import generics, status
 from rest_framework.response import Response
 
 from .services import NoteService
-from .utils.helpers import validate_serializer
+from .utils.compression import NoteCompressionService
 from .utils.models_choices import NoteExposureChoices, NoteExpirationChoices
 from .pagination import PaginationClass
+from django.forms.models import model_to_dict
 
 
 class NoteCreateAPIView(generics.CreateAPIView):
@@ -19,20 +24,18 @@ class NoteCreateAPIView(generics.CreateAPIView):
     lookup_field = 'link_slug'
 
     def create(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data)
-        validate_serializer(serializer)
-        serializer_data = serializer.data
-
         # create note
         data = request.data
         service = NoteService()
         note_instance = service.create_note(note_data=data)
 
         # return API response
-        response_data = serializer_data
-        response_data['id'] = note_instance.id
-        response_data['link_slug'] = note_instance.link_slug
-        return Response(serializer_data, status=status.HTTP_201_CREATED)
+        response_data = model_to_dict(note_instance)
+        response_data['text'] = NoteCompressionService.decompress(bytes(note_instance.text))
+        response_data['inserted_on'] = str(note_instance.inserted_on)
+        response_data['updated_on'] = str(note_instance.inserted_on)
+        del response_data['password']
+        return Response(response_data, status=status.HTTP_201_CREATED)
 
 
 class NoteListPublicLatestAPIView(generics.ListAPIView):
@@ -45,16 +48,38 @@ class NoteListPublicLatestAPIView(generics.ListAPIView):
     lookup_field = 'link_slug'
 
 
-class NoteDetailBySlugAPIView(generics.RetrieveAPIView):
-    queryset = NoteModel.objects.all()
-    serializer_class = NoteSerializer
-    lookup_field = 'link_slug'
+class NodePasswordProtectedDetailByIdAPIView(APIView):
+    @extend_schema(
+        request=NoteFetchByIdSerializer,
+        responses=NoteSerializer
+    )
+    def post(self, request, format=None):
+        node_instance = NoteService().fetch_password_protected_note_by_id(
+            note_id=UUID(request.data['id']),
+            password_user_input=request.data['password_clear']
+        )
+        if not node_instance:
+            return Response("Note not found or bad password", status=status.HTTP_404_NOT_FOUND)
+
+        serializer = NoteSerializer(node_instance)
+        return Response(serializer.data)
 
 
-class NoteDetailByIdAPIView(generics.RetrieveAPIView):
-    queryset = NoteModel.objects.all()
-    serializer_class = NoteSerializer
-    lookup_field = 'id'
+class NodePasswordProtectedDetailByLinkSlugAPIView(APIView):
+    @extend_schema(
+        request=NoteFetchByLinkSlugSerializer,
+        responses=NoteSerializer
+    )
+    def post(self, request, format=None):
+        node_instance = NoteService().fetch_password_protected_note_by_link_slug(
+            link_slug=request.data['link_slug'],
+            password_user_input=request.data['password_clear']
+        )
+        if not node_instance:
+            return Response("Note not found or bad password", status=status.HTTP_404_NOT_FOUND)
+
+        serializer = NoteSerializer(node_instance)
+        return Response(serializer.data)
 
 
 class NoteListAPIView(generics.ListAPIView):
@@ -74,16 +99,20 @@ class NoteDeleteAPIView(generics.DestroyAPIView):
 
 
 class NoteIsPasswordNeededAPIView(APIView):
-    def get(self, request, link_slug: str, format=None):
-        instance_data = NoteModel.objects.values_list('is_password').get(link_slug=link_slug)
-        if not instance_data:
-            raise ValidationError("Note not exists")
+    serializer_class = NodeIsPasswordNeededSerializer
 
-        response_data = dict(is_password_needed=instance_data[0])
-        return Response(response_data)
+    def get(self, request, link_slug: str, format=None):
+        try:
+            note_instance = NoteModel.objects.get(link_slug=link_slug)
+        except ObjectDoesNotExist:
+            return Response("Note not found", status=status.HTTP_404_NOT_FOUND)
+
+        return Response(dict(is_password=note_instance.is_password))
 
 
 class HealthzAPIView(APIView):
+    serializer_class = HealthzSerializer
+
     def get(self, request, format=None):
         response_data = dict(status="OK")
         return Response(response_data)

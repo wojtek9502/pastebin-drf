@@ -26,16 +26,23 @@ class TagModel(BaseModel):
         return f'id: {self.id}, tag: {self.name}'
 
 
+class NotePasswordModel(BaseModel):
+    password_hash = models.BinaryField()
+    salt = models.BinaryField()
+    iterations = models.IntegerField(default=100_000)
+
+
 class NoteModel(BaseModel):
     class Meta:
         verbose_name_plural = "Notes"
 
     title = models.CharField(1024)
-    text = models.TextField()
+    text = models.BinaryField()
     link_slug = models.SlugField(max_length=120)
     expiration_type = models.CharField(max_length=50, choices=NoteExpirationChoices.choices, default=NoteExpirationChoices.NEVER)
     exposure_type = models.CharField(max_length=50, choices=NoteExposureChoices.choices, default=NoteExposureChoices.PUBLIC)
     syntax = models.CharField(max_length=50, choices=NoteSyntaxChoices.choices, default=NoteSyntaxChoices.NONE)
+    password = models.OneToOneField(NotePasswordModel, on_delete=models.CASCADE, null=True)
     is_password = models.BooleanField(default=False)
 
     categories = models.ManyToManyField(CategoryModel, related_name="categories")
