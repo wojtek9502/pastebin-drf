@@ -10,7 +10,6 @@ from .serializers import NoteSerializer, NoteFetchByIdSerializer, NoteFetchByLin
     NodeIsPasswordNeededSerializer, HealthzSerializer
 from rest_framework import generics, status
 from rest_framework.response import Response
-
 from .services import NoteService
 from .utils.compression import NoteCompressionService
 from .utils.models_choices import NoteExposureChoices, NoteExpirationChoices

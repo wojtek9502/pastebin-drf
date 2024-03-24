@@ -1,17 +1,23 @@
 import datetime
+import logging
 import os
 from typing import Dict, Optional
 from uuid import UUID
 
+from pytz import timezone
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
+from django.utils.timezone import get_current_timezone
 from dateutil.relativedelta import *
+
 
 from .models import NoteModel, TagModel, CategoryModel, NotePasswordModel
 from .utils.compression import NoteCompressionService
 from .utils.cryptography import PasswordHashService, PasswordHashDTO
 from .utils.helpers import get_note_link_slug
 from .utils.models_choices import NoteExpirationChoices
+
+logger = logging.getLogger(__name__)
 
 
 class NoteService:
@@ -128,37 +134,42 @@ class NoteService:
 class NoteExpirationService:
     @staticmethod
     def delete_expired_notes():
+        settings_timezone = timezone(get_current_timezone().key)
         expired_notes_query = NoteModel.objects.filter(
             ~Q(expiration_type=NoteExpirationChoices.NEVER) &
             ~Q(expiration_type=NoteExpirationChoices.BURN_AFTER_READ)
         ).filter(
-            expiration_date__lte=datetime.datetime.now()
+            expiration_date__lte=datetime.datetime.now().astimezone(settings_timezone)
         )
+
+        logger.info(f"Notes to delete: {expired_notes_query.count()}")
         expired_notes_query.delete()
 
     @staticmethod
     def calc_expiration_date(expiration_type: NoteExpirationChoices):
-        if expiration_type == NoteExpirationChoices.NEVER:
-            return None
-        if expiration_type == NoteExpirationChoices.BURN_AFTER_READ:
-            return None
+        expiration_date = None
+        if expiration_type == NoteExpirationChoices.FIVE_MINUTES:
+            expiration_date = datetime.datetime.now() + datetime.timedelta(minutes=+1)
         if expiration_type == NoteExpirationChoices.TEN_MINUTES:
-            return datetime.datetime.now() + datetime.timedelta(minutes=+10)
+            expiration_date = datetime.datetime.now() + datetime.timedelta(minutes=+10)
         if expiration_type == NoteExpirationChoices.ONE_HOUR:
-            return datetime.datetime.now() + datetime.timedelta(hours=+1)
+            expiration_date = datetime.datetime.now() + datetime.timedelta(hours=+1)
         if expiration_type == NoteExpirationChoices.ONE_DAY:
-            return datetime.datetime.now() + datetime.timedelta(days=+1)
+            expiration_date = datetime.datetime.now() + datetime.timedelta(days=+1)
         if expiration_type == NoteExpirationChoices.ONE_WEEK:
-            return datetime.datetime.now() + datetime.timedelta(days=+7)
+            expiration_date = datetime.datetime.now() + datetime.timedelta(days=+7)
         if expiration_type == NoteExpirationChoices.TWO_WEEKS:
-            return datetime.datetime.now() + datetime.timedelta(days=+14)
+            expiration_date = datetime.datetime.now() + datetime.timedelta(days=+14)
         if expiration_type == NoteExpirationChoices.ONE_MONTH:
-            return datetime.datetime.now() + relativedelta(months=+1)
+            expiration_date = datetime.datetime.now() + relativedelta(months=+1)
         if expiration_type == NoteExpirationChoices.TWO_WEEKS:
-            return datetime.datetime.now() + relativedelta(months=+2)
+            expiration_date = datetime.datetime.now() + relativedelta(months=+2)
         if expiration_type == NoteExpirationChoices.THREE_MONTHS:
-            return datetime.datetime.now() + relativedelta(months=+3)
+            expiration_date = datetime.datetime.now() + relativedelta(months=+3)
         if expiration_type == NoteExpirationChoices.SIX_MONTHS:
-            return datetime.datetime.now() + relativedelta(months=+6)
+            expiration_date = datetime.datetime.now() + relativedelta(months=+6)
         if expiration_type == NoteExpirationChoices.ONE_YEAR:
-            return datetime.datetime.now() + relativedelta(years=+1)
+            expiration_date = datetime.datetime.now() + relativedelta(years=+1)
+
+        settings_timezone = timezone(get_current_timezone().key)
+        return expiration_date.astimezone(settings_timezone)

@@ -40,11 +40,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_extensions', #Great packaged to access abstract models
-    'django_filters', #Used with DRF
-    'rest_framework', #DRF package
-    'app', # New app
+    'django_extensions',
+    'django_filters',
+    'rest_framework',
+    'app',
     'drf_spectacular',
+    'django_celery_beat'
 ]
 
 MIDDLEWARE = [
@@ -76,6 +77,20 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'pastebin.wsgi.application'
+
+# Celery settings
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND')
+
+# Celery beat periodic tasks
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    'delete_expired_notes': {
+        'task': 'app.tasks.delete_expired_notes_task',
+        'schedule': crontab() # every minute
+    }
+}
+
 
 # DRF
 REST_FRAMEWORK = {

@@ -54,6 +54,11 @@ clean-test-reports:
 
 clean: clean-logs clean-test-reports
 
+run-worker:
+	./run-worker.sh
+
+run-celery-beat:
+	./run-celery-beat.sh
 
 run-pgadmin:
 	docker rm -f pgadmin

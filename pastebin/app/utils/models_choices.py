@@ -4,6 +4,7 @@ from django.db import models
 class NoteExpirationChoices(models.TextChoices):
     NEVER = "NEVER"
     BURN_AFTER_READ = "BURN_AFTER_READ"
+    FIVE_MINUTES = "FIVE_MINUTES"
     TEN_MINUTES = "TEN_MINUTES"
     ONE_HOUR = "ONE_HOUR"
     ONE_DAY = "ONE_DAY"
