@@ -43,6 +43,7 @@ class NoteSerializer(serializers.ModelSerializer):
     text = serializers.SerializerMethodField(read_only=True)
     link_slug = CharField(read_only=True)
     expiration_type = CharField(required=False, default=NoteExpirationChoices.NEVER)
+    expiration_date = DateTimeField(allow_null=True)
     exposure_type = CharField(required=False, default=NoteExposureChoices.PUBLIC)
     syntax = CharField(required=False, default=NoteSyntaxChoices.NONE)
     password_clear = CharField(source='password', required=False, write_only=True, default='')
@@ -54,7 +55,7 @@ class NoteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.NoteModel
-        fields = ('id', 'title', 'text_input', 'text', 'link_slug', 'expiration_type',
+        fields = ('id', 'title', 'text_input', 'text', 'link_slug', 'expiration_type', 'expiration_date',
                   'exposure_type', 'syntax', 'password_clear', 'is_password',
                   'categories', 'tags', 'inserted_on', 'updated_on')
 

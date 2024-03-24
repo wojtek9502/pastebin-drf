@@ -1,13 +1,17 @@
+import datetime
 import os
 from typing import Dict, Optional
 from uuid import UUID
 
 from django.core.exceptions import ObjectDoesNotExist
+from django.db.models import Q
+from dateutil.relativedelta import *
 
 from .models import NoteModel, TagModel, CategoryModel, NotePasswordModel
 from .utils.compression import NoteCompressionService
 from .utils.cryptography import PasswordHashService, PasswordHashDTO
 from .utils.helpers import get_note_link_slug
+from .utils.models_choices import NoteExpirationChoices
 
 
 class NoteService:
@@ -39,6 +43,9 @@ class NoteService:
         password = note_data['password_clear']
         is_password = True if len(password) else False
         note_compressed = NoteCompressionService.compress(note_data['text_input'])
+        expiration_date = NoteExpirationService.calc_expiration_date(
+            expiration_type=NoteExpirationChoices(note_data['expiration_type'])
+        )
 
         # create password
         password_instance = None
@@ -56,10 +63,11 @@ class NoteService:
             text=note_compressed,
             link_slug=get_note_link_slug(),
             expiration_type=note_data['expiration_type'],
+            expiration_date=expiration_date,
             exposure_type=note_data['exposure_type'],
             syntax=note_data['syntax'],
             password=password_instance,
-            is_password=is_password
+            is_password=is_password,
         )
         note_instance.save()
 
@@ -115,3 +123,42 @@ class NoteService:
             return note_instance
 
         return None
+
+
+class NoteExpirationService:
+    @staticmethod
+    def delete_expired_notes():
+        expired_notes_query = NoteModel.objects.filter(
+            ~Q(expiration_type=NoteExpirationChoices.NEVER) &
+            ~Q(expiration_type=NoteExpirationChoices.BURN_AFTER_READ)
+        ).filter(
+            expiration_date__lte=datetime.datetime.now()
+        )
+        expired_notes_query.delete()
+
+    @staticmethod
+    def calc_expiration_date(expiration_type: NoteExpirationChoices):
+        if expiration_type == NoteExpirationChoices.NEVER:
+            return None
+        if expiration_type == NoteExpirationChoices.BURN_AFTER_READ:
+            return None
+        if expiration_type == NoteExpirationChoices.TEN_MINUTES:
+            return datetime.datetime.now() + datetime.timedelta(minutes=+10)
+        if expiration_type == NoteExpirationChoices.ONE_HOUR:
+            return datetime.datetime.now() + datetime.timedelta(hours=+1)
+        if expiration_type == NoteExpirationChoices.ONE_DAY:
+            return datetime.datetime.now() + datetime.timedelta(days=+1)
+        if expiration_type == NoteExpirationChoices.ONE_WEEK:
+            return datetime.datetime.now() + datetime.timedelta(days=+7)
+        if expiration_type == NoteExpirationChoices.TWO_WEEKS:
+            return datetime.datetime.now() + datetime.timedelta(days=+14)
+        if expiration_type == NoteExpirationChoices.ONE_MONTH:
+            return datetime.datetime.now() + relativedelta(months=+1)
+        if expiration_type == NoteExpirationChoices.TWO_WEEKS:
+            return datetime.datetime.now() + relativedelta(months=+2)
+        if expiration_type == NoteExpirationChoices.THREE_MONTHS:
+            return datetime.datetime.now() + relativedelta(months=+3)
+        if expiration_type == NoteExpirationChoices.SIX_MONTHS:
+            return datetime.datetime.now() + relativedelta(months=+6)
+        if expiration_type == NoteExpirationChoices.ONE_YEAR:
+            return datetime.datetime.now() + relativedelta(years=+1)

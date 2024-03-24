@@ -40,6 +40,7 @@ class NoteModel(BaseModel):
     text = models.BinaryField()
     link_slug = models.SlugField(max_length=120)
     expiration_type = models.CharField(max_length=50, choices=NoteExpirationChoices.choices, default=NoteExpirationChoices.NEVER)
+    expiration_date = models.DateTimeField(null=True)
     exposure_type = models.CharField(max_length=50, choices=NoteExposureChoices.choices, default=NoteExposureChoices.PUBLIC)
     syntax = models.CharField(max_length=50, choices=NoteSyntaxChoices.choices, default=NoteSyntaxChoices.NONE)
     password = models.OneToOneField(NotePasswordModel, on_delete=models.CASCADE, null=True)
