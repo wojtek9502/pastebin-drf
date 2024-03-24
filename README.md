@@ -5,9 +5,9 @@
 
 ## Run
 1. Run containers
-```shell
-make up
-```
+   ```shell
+   make up
+   ```
 
 2. In new terminal, run worker
     ```shell
