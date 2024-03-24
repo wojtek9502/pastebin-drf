@@ -149,7 +149,7 @@ class NoteExpirationService:
     def calc_expiration_date(expiration_type: NoteExpirationChoices):
         expiration_date = None
         if expiration_type == NoteExpirationChoices.FIVE_MINUTES:
-            expiration_date = datetime.datetime.now() + datetime.timedelta(minutes=+1)
+            expiration_date = datetime.datetime.now() + datetime.timedelta(minutes=+5)
         if expiration_type == NoteExpirationChoices.TEN_MINUTES:
             expiration_date = datetime.datetime.now() + datetime.timedelta(minutes=+10)
         if expiration_type == NoteExpirationChoices.ONE_HOUR:
