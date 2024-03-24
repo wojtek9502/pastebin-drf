@@ -37,7 +37,7 @@ class NoteModel(BaseModel):
         verbose_name_plural = "Notes"
 
     title = models.CharField(1024)
-    text = models.TextField()
+    text = models.BinaryField()
     link_slug = models.SlugField(max_length=120)
     expiration_type = models.CharField(max_length=50, choices=NoteExpirationChoices.choices, default=NoteExpirationChoices.NEVER)
     exposure_type = models.CharField(max_length=50, choices=NoteExposureChoices.choices, default=NoteExposureChoices.PUBLIC)

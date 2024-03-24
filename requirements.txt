@@ -21,3 +21,4 @@ referencing==0.34.0
 rpds-py==0.18.0
 sqlparse==0.4.4
 uritemplate==4.1.1
+zstd==1.5.5.1

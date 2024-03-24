@@ -1,10 +1,11 @@
 import os
-from typing import Dict
+from typing import Dict, Optional
 from uuid import UUID
 
 from django.core.exceptions import ObjectDoesNotExist
 
 from .models import NoteModel, TagModel, CategoryModel, NotePasswordModel
+from .utils.compression import NoteCompressionService
 from .utils.cryptography import PasswordHashService, PasswordHashDTO
 from .utils.helpers import get_note_link_slug
 
@@ -37,6 +38,7 @@ class NoteService:
         categories = note_data['categories']
         password = note_data['password_clear']
         is_password = True if len(password) else False
+        note_compressed = NoteCompressionService.compress(note_data['text_input'])
 
         # create password
         password_instance = None
@@ -51,7 +53,7 @@ class NoteService:
         # create note instance
         note_instance = NoteModel.objects.create(
             title=note_data['title'],
-            text=note_data['text'],
+            text=note_compressed,
             link_slug=get_note_link_slug(),
             expiration_type=note_data['expiration_type'],
             exposure_type=note_data['exposure_type'],
@@ -79,32 +81,37 @@ class NoteService:
         note_instance.categories.set(categories_instances)
         return note_instance
 
-    def fetch_password_protected_note_by_id(self, note_id: UUID, password_user_input: str):
+    def process_note(self, note_instance: NoteModel, password: str) -> Optional[NoteModel]:
+        if note_instance.is_password:
+            is_password_valid = self._is_password_valid(
+                password_db_instance=note_instance.password,
+                password_user_input=password
+            )
+            if is_password_valid:
+                return note_instance
+        else:
+            return note_instance
+
+    def fetch_password_protected_note_by_id(self, note_id: UUID, password_user_input: str) -> Optional[NoteModel]:
         try:
             note_instance = NoteModel.objects.get(id=note_id)
-        except ObjectDoesNotExist as e:
+        except ObjectDoesNotExist:
             note_instance = None
 
         if note_instance:
-            is_password_valid = self._is_password_valid(
-                password_db_instance=note_instance.password,
-                password_user_input=password_user_input
-            )
-            if is_password_valid:
-                return note_instance
+            note_instance = self.process_note(note_instance, password_user_input)
+            return note_instance
+
         return None
 
-    def fetch_password_protected_note_by_link_slug(self, link_slug: str, password_user_input: str):
+    def fetch_password_protected_note_by_link_slug(self, link_slug: str, password_user_input: str) -> Optional[NoteModel]:
         try:
             note_instance = NoteModel.objects.get(link_slug=link_slug)
-        except ObjectDoesNotExist as e:
+        except ObjectDoesNotExist:
             note_instance = None
 
         if note_instance:
-            is_password_valid = self._is_password_valid(
-                password_db_instance=note_instance.password,
-                password_user_input=password_user_input
-            )
-            if is_password_valid:
-                return note_instance
+            note_instance = self.process_note(note_instance, password_user_input)
+            return note_instance
+
         return None

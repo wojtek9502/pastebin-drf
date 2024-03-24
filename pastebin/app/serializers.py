@@ -2,7 +2,12 @@ from . import models
 from rest_framework import serializers
 from rest_framework.fields import CharField, DateTimeField, BooleanField
 
+from .utils.compression import NoteCompressionService
 from .utils.models_choices import NoteExpirationChoices, NoteExposureChoices, NoteSyntaxChoices
+
+
+class NodeIsPasswordNeededSerializer(serializers.Serializer):
+    is_password_needed = BooleanField(default=False)
 
 
 class NoteFetchByIdSerializer(serializers.Serializer):
@@ -34,7 +39,8 @@ class TagSerializer(serializers.ModelSerializer):
 class NoteSerializer(serializers.ModelSerializer):
     id = serializers.UUIDField(read_only=True)
     title = CharField(required=True)
-    text = CharField(required=True)
+    text_input = CharField(required=True, write_only=True)
+    text = serializers.SerializerMethodField(read_only=True)
     link_slug = CharField(read_only=True)
     expiration_type = CharField(required=False, default=NoteExpirationChoices.NEVER)
     exposure_type = CharField(required=False, default=NoteExposureChoices.PUBLIC)
@@ -48,9 +54,14 @@ class NoteSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.NoteModel
-        fields = ('id', 'title', 'text', 'link_slug', 'expiration_type',
+        fields = ('id', 'title', 'text_input', 'text', 'link_slug', 'expiration_type',
                   'exposure_type', 'syntax', 'password_clear', 'is_password',
                   'categories', 'tags', 'inserted_on', 'updated_on')
+
+    def get_text(self, obj):
+        if isinstance(obj, dict):
+            return obj.get('text')
+        return NoteCompressionService.decompress(bytes(obj.text))
 
     def validate(self, data):
         expiration_type = data["expiration_type"]
@@ -72,3 +83,7 @@ class NoteSerializer(serializers.ModelSerializer):
                 {"Invalid Choice": f"syntax field is not valid. Valid choices {syntax_choices}"})
 
         return data
+
+
+class HealthzSerializer(serializers.Serializer):
+    status = CharField(default='OK')
