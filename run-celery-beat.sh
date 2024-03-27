@@ -1,2 +1,2 @@
 cd pastebin
-celery -A app worker --beat --scheduler django -l INFO
+python -m celery -A app worker --beat --scheduler django -l INFO

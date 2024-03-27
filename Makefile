@@ -60,6 +60,9 @@ run-worker:
 run-celery-beat:
 	./run-celery-beat.sh
 
+run-http-server:
+	./run-http-server.sh
+
 run-pgadmin:
 	docker rm -f pgadmin
 	docker run --name pgadmin --net=host -e "PGADMIN_DEFAULT_EMAIL=admin@admin.com" -e "PGADMIN_DEFAULT_PASSWORD=admin" -d dpage/pgadmin4

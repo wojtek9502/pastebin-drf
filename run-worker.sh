@@ -1,2 +1,2 @@
 cd pastebin
-celery -A app worker -l INFO
+python -m celery -A app worker -l INFO

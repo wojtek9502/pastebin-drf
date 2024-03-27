@@ -2,6 +2,7 @@ version: '3.6'
 services:
   db:
     image: postgres:16.1-bullseye
+    container_name: postgres-db
     environment:
       TZ: Europe/Warsaw
       POSTGRES_DB: pastebin
@@ -11,9 +12,29 @@ services:
       - '5432:5432'
     volumes:
       - /home/volumes/db:/var/lib/postgresql/data
+
   redis:
     image: redis
+    container_name: redis
     environment:
       TZ: Europe/Warsaw
     ports:
       - '6379:6379'
+
+  worker:
+    image: wojtek9502/pastebin-drf
+    container_name: worker
+    command: ['bash', '/app/run-worker.sh']
+    env_file:
+      - path: ./pastebin/.env
+        required: true
+    network_mode: host
+
+  celery-beat:
+    image: wojtek9502/pastebin-drf
+    container_name: celery-beat
+    command: ['bash', '/app/run-celery-beat.sh']
+    env_file:
+      - path: ./pastebin/.env
+        required: true
+    network_mode: host
