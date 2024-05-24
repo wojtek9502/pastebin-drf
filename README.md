@@ -1,5 +1,6 @@
 ## Pastebin DRF
-Pastebin clone with Django Rest Framework. An API for sharing your notes, you can add expiration time, password, syntax, categories or tags. Your note can be private or public
+Pastebin clone with Django Rest Framework. An API for sharing your notes, you can add expiration time, password, syntax, categories or tags. Your note can be private or public  
+Celery-beat is used to delete expired notes as scheduled task
 
 <!-- TOC -->
   * [Pastebin DRF](#pastebin-drf)
@@ -23,7 +24,7 @@ Create note
 See note
 ![img.png](screenshots/screen3.png)
 
-See all shots with pagination
+See all notes with pagination
 ![img.png](screenshots/screen4.png)
 </details>
 
